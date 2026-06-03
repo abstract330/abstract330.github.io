@@ -1,0 +1,30 @@
+body {
+  background-color: powderblue;
+}
+h1 {
+  color: darkblue;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+p {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+a {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+a:hover {
+    text-decoration: none;
+    color: darkblue;
+}
+
+.slider-container {
+  display: flex;         /* Enables flexbox layout mechanics */
+  align-items: center;   /* Perfectly centers items along the cross-axis (vertically) */
+  gap: 12px;             /* Adds clean, consistent space between the text and the slider */
+  padding: 8px 0;        /* Adds vertical padding for better spacing around the container */
+}
+
+.wide-text-input {
+  width: 35%;
+  
+}
