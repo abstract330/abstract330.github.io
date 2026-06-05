@@ -12,12 +12,19 @@
         <script>
             function test() {
                 reset()
-                addBlock(15, 0, 1, 0)
+                let a = addBlock(15, 0, 0, -5)
+                let b = addBlock(15, 1, 0, -5)
+                let c = addBlock(15, 2, 0, -5)
                 addBuilding("AsciiKeyInput", 0, 0, 0);
+                connectBuilding(a, 0, "ascii[0]")
+                connectBuilding(b, 0, "ascii[1]")
+                connectBuilding(c, 0, "ascii[2]")
 
-                copy(compile());
+
+                result = compile();
+                copy(result)
                 document.getElementById("output").textContent = JSON.stringify(circuit);
-                document.getElementById("output2").textContent = compile();
+                document.getElementById("output2").textContent = result;
             }
         </script>
         <button onclick="test()">CLICK TO TESTTTTT</button>

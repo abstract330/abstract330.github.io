@@ -31,8 +31,10 @@
                     const charCode = char.charCodeAt(0);
                     addBlock(13, (i - (input.length - 1) / 2) * spacing, 0, 0, [charCode]);
                 }
-                copy(compile());
-                output.textContent = "Copied \"" + input + "\"!";
+                compile().then((result) => {
+                    copy(result);
+                    output.textContent = "Copied \"" + input + "\"!";
+                });
             }
         </script>
 

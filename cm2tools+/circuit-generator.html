@@ -19,8 +19,10 @@
                     for (let i = 0; i < 19; i++) {
                         addBlock(i, i, 0, 0)
                     }
-                    copy(compile());
-                    document.getElementById("output").textContent = "Generated All Blocks!";
+                    compile().then((result) => {
+                        copy(result)
+                        document.getElementById("output").textContent = "Generated All Blocks!";
+                    });
                 }
             }
             
@@ -49,8 +51,10 @@
                         }
                     }
                 }
-                copy(compile());
-                document.getElementById("output").textContent = "Generated " + size + "-bit Decoder!";
+                compile().then((result) => {
+                        copy(result)
+                        document.getElementById("output").textContent = "Generated " + size + "-bit Decoder!";
+                });
             }
 
             function generateEncoder(size) {
@@ -70,8 +74,10 @@
                         }
                     }
                 }
-                copy(compile());
-                document.getElementById("output").textContent = "Generated " + size + "-bit Encoder!";
+                compile().then((result) => {
+                    copy(result);
+                    document.getElementById("output").textContent = "Generated " + size + "-bit Encoder!";
+                });
             }
 
             function generateCLA(size) {
@@ -142,8 +148,10 @@
                         }
                    }
                 }
-                copy(compile());
-                document.getElementById("output").textContent = "Generated " + size + "-bit CLA Adder!";
+                compile().then((result) => {
+                    copy(result);
+                    document.getElementById("output").textContent = "Generated " + size + "-bit CLA Adder!";
+                });
             }
         </script>
     </head>

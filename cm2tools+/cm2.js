@@ -1,6 +1,5 @@
 let circuit = []
 let simulated = []
-
 let json_data = {}
 
 async function get_data(filePath) {
@@ -24,8 +23,8 @@ get_data("block_data.json").then(data => {json_data.block_data = data})
 get_data("building_data.json").then(data => {json_data.building_data = data})
 
 
-function get_block_data(name = "NOR") {
-    return json_data.block_data.find(item => item.id == name)
+function block(name = "NOR") {
+    return json_data.block_data.findIndex(item => item.id == name)
 }
 
 function reset() {
@@ -42,95 +41,93 @@ function reset() {
     }
 }
 
-function block_behaivior(block_id = 0, previous = 0, inputs = [], rising_edge = []) {
-    let out;
-    switch (block_id) {
-        case 0: {
-            out = 1;
-            for (let i in inputs) {
-                if (i == 1) {
-                    out = 0;
-                    break;
-                }
-            }
-            break;
-        }
-        case 1: {
-            out = 1;
-            for (let i in inputs) {
-                if (i == 0) {
-                    out = 0;
-                    break
-                }
-            }
-            break
-        }
-        case 2: {
-            out = 0;
-            for (let i in inputs) {
-                if (i == 1) {
-                    out = 1;
-                    break;
-                }
-            }
-            break
-        }
-        case 3: {
-            out = 0;
-            for (let i in inputs) {
-                if (i == 1) {
-                    out = 1 - out
-                }
-            }
-            break
-        }
-        case 4: {
-            out = 0;
-            for (let i in inputs) {
-                if (i == 1) {
-                    out = 1
-                    break
-                }
-            }
-            break
-        }
-        case 5: {
-            out = previous
-            for (let i in rising_edge) {
-                if (i == 1) {
-                    out = 1 - out
-                    break
-                }
-            }
-            break
-        }
-        case 6: {
-            out = 0;
-            for (let i in inputs) {
-                if (i == 1) {
-                    out = 1
-                    break
-                }
-            }
-            break
-        }
-        case 7: {
-            out = 0;
-            for (let i in inputs) {
-                if (i == 1) {
-                    out = 1
-                    break
-                }
-            }
-            break
-        }
-
-    }
-}
 
 function update() {
     let new_circuit = circuit;
-    
+    function block_behaivior(block) {
+        let out;
+        switch (circuit.blocks[block].id) {
+            case 0: {
+                for (let i in inputs) {
+                    if (i == 1) {
+                        return 0;
+                    }
+                }
+                return 1;
+            }
+            case 1: {
+                out = 1;
+                for (let i in inputs) {
+                    if (i == 0) {
+                        out = 0;
+                        break
+                    }
+                }
+                break
+            }
+            case 2: {
+                out = 0;
+                for (let i in inputs) {
+                    if (i == 1) {
+                        out = 1;
+                        break;
+                    }
+                }
+                break
+            }
+            case 3: {
+                out = 0;
+                for (let i in inputs) {
+                    if (i == 1) {
+                        out = 1 - out
+                    }
+                }
+                break
+            }
+            case 4: {
+                out = 0;
+                for (let i in inputs) {
+                    if (i == 1) {
+                        out = 1
+                        break
+                    }
+                }
+                break
+            }
+            case 5: {
+                out = previous
+                for (let i in rising_edge) {
+                    if (i == 1) {
+                        out = 1 - out
+                        break
+                    }
+                }
+                break
+            }
+            case 6: {
+                out = 0;
+                for (let i in inputs) {
+                    if (i == 1) {
+                        out = 1
+                        break
+                    }
+                }
+                break
+            }
+            case 7: {
+                out = 0;
+                for (let i in inputs) {
+                    if (i == 1) {
+                        out = 1
+                        break
+                    }
+                }
+                break
+            }
+
+        }
+        return out;
+    }
 }
 
 function addBlock(block, x, y, z, data = [], power = 0) {
@@ -147,9 +144,11 @@ function addBuilding(building, x, y, z, front_vector = [0, 0, 1], up_vector = [0
     return circuit.buildings.length - 1 // Building does not have a referenced ID but it is easier to at 0 to index with arrays
 }
 
-function connectBuilding(block, building, building_node, input) {
-    let building_node_index = json_data.building_data[circuit.buildings[building].id][building_node].findIndex(item => item.name === building_node)
-    circuit.buildings[building].connections[building_node_index].push(String(block))
+function connectBuilding(block = 1, building = 0, building_node, input = false) {
+    let buildingId = circuit.buildings[building].id
+    let building_node_index = json_data.building_data[buildingId].findIndex(item => item.name === building_node)
+    circuit.buildings[building].connections[building_node_index] ||= []
+    circuit.buildings[building].connections[building_node_index].push(+input + String(block))
 }
 
 function getRightVector(front_vector, up_vector) {
@@ -161,7 +160,7 @@ function getRightVector(front_vector, up_vector) {
     ]
 }
 
-function compile() {
+async function compile() {
     // Convert circuit object into CM2 register format
     let compiled_blocks = []
     for (let block of circuit.blocks) {
@@ -173,15 +172,17 @@ function compile() {
     }
     let compiled_buildings = []
     for (let building of circuit.buildings) {
-        compiled_buildings.push(`${building.id},${building.x},${building.y},${building.z},${building.front_vector.join(',')},${building.up_vector.join(',')},${getRightVector(building.front_vector, building.up_vector).join(',')}`)
+        compiled_buildings.push(`${building.id},${building.x},${building.y},${building.z},${building.front_vector.join(',')},${building.up_vector.join(',')},${building.right_vector.join(',')},${building.connections.map(innerArray => innerArray.join('+')).join(',')}`)
     }
-    return [compiled_blocks.join(';'), compiled_connections.join(';'), compiled_buildings.join(';')].join('?') + "?"
+
+    let result = [compiled_blocks.join(';'), compiled_connections.join(';'), compiled_buildings.join(';')].join('?') + "?"
+    console.log(`Successfully comiled: ${result}`)
+    return result
 }
 
-function copy(circuit) {
-    navigator.clipboard.writeText(circuit).then(() => {
-        // alert("Circuit copied to clipboard!")
+function copy(data) {
+    navigator.clipboard.writeText(data || result).then(() => {
     }).catch(err => {
         alert("Failed to copy circuit: " + err)
     })
-}1
+}

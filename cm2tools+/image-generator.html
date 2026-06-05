@@ -18,30 +18,33 @@
                     return;
                 }
                 reset();
-
-                const image = new Image();
-                image.src = URL.createObjectURL(file);
-                image.onload = function() {
-                    const canvas = document.createElement("canvas");
-                    const ctx = canvas.getContext("2d");
-                    ctx.drawImage(image, 0, 0);
-                    for (let y = 0; y < image.height; y += downscale) {
-                        for (let x = 0; x < image.width; x += downscale) {
-                            const pixelData = ctx.getImageData(x, y, 1, 1).data;
-                            const r = pixelData[0];
-                            const g = pixelData[1];
-                            const b = pixelData[2];
-                            const a = pixelData[3];
-                            if (a > 0) { // Only add blocks for non-transparent pixels
-                                const gray = Math.round((r + g + b) / 3);
-                                const blockId = 13; // You can change this to use different block types based on color
-                                addBlock(blockId, (x - image.width / 2) * scale / downscale, (y - image.height / 2) * scale / downscale, 0, [gray]);
+                function loadImg() {
+                            const image = new Image();
+                            image.src = URL.createObjectURL(file);
+                            console.log("PLEASE")
+                            image.onload = function() {
+                                const canvas = document.createElement("canvas");
+                                canvas.width = image.width;
+                                canvas.height = image.height;
+                                const ctx = canvas.getContext("2d");
+                                ctx.drawImage(image, 0, 0);
+                                console.log(canvas.width, canvas.height)
+                                for (let y = 0;  y < Math.floor(image.height / downscale); y++) {
+                                    for (let x = 0; x < Math.floor(image.width / downscale); x++) {
+                                        const pixelData = ctx.getImageData(x * downscale, image.height - y * downscale, 1, 1).data;
+                                        const r = pixelData[0];
+                                        const g = pixelData[1];
+                                        const b = pixelData[2];
+                                        addBlock(14, x * scale * downscale, y * scale * downscale, (x+y) / 1000, [r, g, b]);
+                                    }
+                                }
+                                compile().then((result) => {
+                                    copy(result)
+                                })
+                                document.getElementById("output").textContent = "Generated Image!";
                             }
-                        }
-                    }
                 }
-                copy(compile())
-                document.getElementById("output").textContent = "Generated Image!";
+                loadImg()
             }
         </script>
     </head>
@@ -52,7 +55,7 @@
         <input type="number" id="downscaleFactor" placeholder="Downscale Factor (e.g. 4)" value=""><br>
         <input type="number" id="scaleFactor" placeholder="Scale Factor (e.g. 1)" value=""><br>
         <button onclick="generateImage()">Generate Image</button><br>
-        <p id="output"></p>
+            <p id="output"></p>
     </body>
     <footer>
         <a href="index.html">Back to Home</a>
