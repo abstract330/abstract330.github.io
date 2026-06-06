@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor - CM2Tools+</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. Import the Import Map to resolve bare module specifiers -->
+   <script type="importmap">
+        {
+            "imports": {
+                "three": "../../modules/three.module.js"
+            }
+        }
+    </script>
+
+
+    <!-- 2. Write your Three.js code using standard ES Modules -->
+    <script type="module" src="main.js"></script>
+</body>
+</html>

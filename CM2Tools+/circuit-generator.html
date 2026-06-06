@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Circuit Generator - CM2 Tools+</title>
+        <link rel="stylesheet" href="../style.css">
+        <script  src="cm2.js"></script>
+        <script>
+            function generateCircuit() {
+                let selectedValue = document.getElementById("buildingSelect").value;
+                let size = parseInt(document.getElementById("bitwidthinput").value);
+                if (selectedValue === "2") {
+                    generateCLA(size);
+                } else if (selectedValue === "1") {
+                    generateEncoder(size);
+                } else if (selectedValue === "0") {
+                    generateDecoder(size);
+                } else if (selectedValue === "3") {
+                    reset();
+                    for (let i = 0; i < 19; i++) {
+                        addBlock(i, i, 0, 0)
+                    }
+                    compile().then((result) => {
+                        copy(result)
+                        document.getElementById("output").textContent = "Generated All Blocks!";
+                    });
+                }
+            }
+            
+            function generateDecoder(size) {
+                reset();
+                let inputs = [];
+                let input_delayed = [];
+                let inverses = [];
+                for (let i = 0; i < size; i++) {
+                    let input = addBlock(15, i, 0, 0)
+                    inputs.push(input);
+                    let input_delay = addBlock(2, i, 0, 1);
+                    input_delayed.push(input_delay);
+                    connect(input, input_delay);
+                    let inverse = addBlock(0, i, 0, 2)
+                    inverses.push(inverse);
+                    connect(input, inverse);
+                }
+                for (let i = 0; i < Math.pow(2, size); i++) {
+                    let output = addBlock(1, i, 0, 3);
+                    for (let j = 0; j < size; j++) {
+                        if ((i & (1 << j)) !== 0) {
+                            connect(input_delayed[j], output);
+                        } else {
+                            connect(inverses[j], output);
+                        }
+                    }
+                }
+                compile().then((result) => {
+                        copy(result)
+                        document.getElementById("output").textContent = "Generated " + size + "-bit Decoder!";
+                });
+            }
+
+            function generateEncoder(size) {
+                reset();
+                let outputs = [];
+                let inputs = [];
+                for (let i = 0; i < size; i++) {
+                    let output = addBlock(15, i, 0, 1);
+                    outputs.push(output);
+                }
+                for (let i = 0; i < Math.pow(2, size); i++) {
+                    let input = addBlock(15, i, 0, 0);
+                    inputs.push(input);
+                    for (let j = 0; j < size; j++) {
+                        if ((i & (1 << j)) !== 0) {
+                            connect(input, outputs[j]);
+                        }
+                    }
+                }
+                compile().then((result) => {
+                    copy(result);
+                    document.getElementById("output").textContent = "Generated " + size + "-bit Encoder!";
+                });
+            }
+
+            function generateCLA(size) {
+                reset();
+                let inputA = [];
+                let inputB = [];
+                let carryin = 0;
+                let propagates = [];
+                let outputs = [];
+
+                // Genereate initial blocks
+                carryin = addBlock(15, size, 0, 0); // Carry in
+
+                for (let i = 0; i < size; i++) {
+                    // Basic input
+                    let nA = addBlock(15, i, 0, 0);
+                    let nB = addBlock(15, i, 0, -2);
+                    inputA.push(nA);
+                    inputB.push(nB);
+
+                    // Input flipflops
+                    let fA = addBlock(5, i, 1, 0);
+                    let fB = addBlock(5, i, 1, -2);
+                    connect(fA, nA);
+                    connect(fB, nB);
+                    
+                    // Propigate ORs/Nodes (Nodes can be used as instant ORs)
+                    let p = addBlock(15, i, 0, -3);
+                    propagates.push(p);
+                    connect(nA, p);
+                    connect(nB, p);
+
+                    // CLA output or
+                    let out = addBlock(15, i, 0, -(size + 4));
+                    outputs.push(out);
+
+                    let abXor = addBlock(3, i, 0, -(size + 5)); // A and B XOR
+                    connect(nA, abXor);
+                    connect(nB, abXor);
+                    let carryXor = addBlock(3, i, 0, -(size + 6)); // Carry and A XOR
+                    connect(out, carryXor);
+                    connect(abXor, carryXor);
+                }
+
+                for (let c = 0; c < size; c++) {
+                   // Create ands to test for Propigates and generates
+                   for (let r = 0; r <= c; r++) {
+                        let and = addBlock(1, size - c - 1, 0, r - size - 3);
+                        connect(and, outputs[size - 1 - c]);
+
+                        // Term index for the generate input is c - 1 - r.
+                        // If that index is -1, use carryin; otherwise use inputA/inputB at that bit.
+                        let genIndex = c - 1 - r;
+
+                        // Connect all propagate signals for this term.
+                        for (let j = 0; j < r; j++) {
+                            let pIndex = c - 1 - j;
+                            if (pIndex >= 0) {
+                                connect(propagates[size - 1 -pIndex], and);
+                            }
+                        }
+
+                        if (genIndex === -1) {
+                            connect(carryin, and);
+                        } else if (genIndex >= 0) {
+                            connect(inputA[size - 1 - genIndex], and);
+                            connect(inputB[size - 1 - genIndex], and);
+                        }
+                   }
+                }
+                compile().then((result) => {
+                    copy(result);
+                    document.getElementById("output").textContent = "Generated " + size + "-bit CLA Adder!";
+                });
+            }
+        </script>
+    </head>
+    <body>
+        <h1>Circuit Generator</h1>
+        <p>Generate circuits for your builds.</p>
+        <!-- Add circuit generation UI here -->
+        <select id="buildingSelect">
+            <option value=0>Decoder</option>
+            <option value=1>Encoder</option>
+            <option value=2>CLA Adder</option>
+            <option value=3>All Blocks</option>
+        </select>
+        <br>
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                const bitWidthInput = document.getElementById("bitwidthinput");
+                const sizeValue = document.getElementById("sizeValue");
+
+                if (bitWidthInput && sizeValue) {
+                    bitWidthInput.addEventListener("input", function() {
+                        sizeValue.textContent = this.value;
+                    });
+                }
+            });
+        </script>
+        <div class="slider-container">
+            <label for="bitwidthinput">Circuit Bit-width:</label>
+            <input type="range" id="bitwidthinput" min="1" max="128" value="8">
+            <span id="sizeValue">8</span>
+        </div>
+        <button onclick="generateCircuit()">Generate Circuit</button>
+        <p id="output"></p>
+    </body>
+    <footer>
+        <a href="index.html">Back to Home</a>
+    </footer>
+</html>

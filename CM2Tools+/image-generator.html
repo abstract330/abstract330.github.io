@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Image Generator - CM2 Tools+</title>
+        <link rel="stylesheet" href="../style.css">
+        <script src="cm2.js"></script>
+        <script>
+            function generateImage() {
+                const file = document.getElementById("imageInput").files[0];
+                const downscale = Math.floor(Number(parseInt(document.getElementById("downscaleFactor").value)));
+                const scale = Number(parseFloat(document.getElementById("scaleFactor").value));
+                if (!file) {
+                    alert("Please select an image file.");
+                    return;
+                }
+                if (downscale < 1) {
+                    alert("You can not upscale the image...");
+                    return;
+                }
+                reset();
+                function loadImg() {
+                            const image = new Image();
+                            image.src = URL.createObjectURL(file);
+                            console.log("PLEASE")
+                            image.onload = function() {
+                                const canvas = document.createElement("canvas");
+                                canvas.width = image.width;
+                                canvas.height = image.height;
+                                const ctx = canvas.getContext("2d");
+                                ctx.drawImage(image, 0, 0);
+                                console.log(canvas.width, canvas.height)
+                                for (let y = 0;  y < Math.floor(image.height / downscale); y++) {
+                                    for (let x = 0; x < Math.floor(image.width / downscale); x++) {
+                                        const pixelData = ctx.getImageData(x * downscale, image.height - y * downscale, 1, 1).data;
+                                        const r = pixelData[0];
+                                        const g = pixelData[1];
+                                        const b = pixelData[2];
+                                        addBlock(14, x * scale * downscale, y * scale * downscale, (x+y) / 1000, [r, g, b]);
+                                    }
+                                }
+                                compile().then((result) => {
+                                    copy(result)
+                                })
+                                document.getElementById("output").textContent = "Generated Image!";
+                            }
+                }
+                loadImg()
+            }
+        </script>
+    </head>
+    <body>
+        <h1>Image Generator</h1>
+        <p>Generate an image to paste into CM2.</p>
+        <input type="file" id="imageInput" accept="image/*"><br><br>
+        <input type="number" id="downscaleFactor" placeholder="Downscale Factor (e.g. 4)" value=""><br>
+        <input type="number" id="scaleFactor" placeholder="Scale Factor (e.g. 1)" value=""><br>
+        <button onclick="generateImage()">Generate Image</button><br>
+            <p id="output"></p>
+    </body>
+    <footer>
+        <a href="index.html">Back to Home</a>
+    </footer>
+</html>
