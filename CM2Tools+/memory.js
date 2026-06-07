@@ -34,28 +34,18 @@ function to16(num) {
     return result.slice(-2); 
 }
 
-async function deflate(text) {
-  const encoder = new TextEncoder();
-  const uint8Array = encoder.encode(text);
-  
-  // Create a stream with the format set to "deflate-raw"
-  const cs = new CompressionStream("deflate-raw");
-  const writer = cs.writable.getWriter();
-  
-  writer.write(uint8Array);
-  writer.close();
-  
-  // Read the compressed data from the readable stream
-  const response = new Response(cs.readable);
-  const arrayBuffer = await response.arrayBuffer();
-  
-  return new Uint8Array(arrayBuffer);
+function cleanNumber(input) {
+  if (typeof input === 'string' && input.length > 0) {
+    return input.charCodeAt(0);
+  }
+  return +input; 
 }
 
 function convertToMassMemory(data) {
     // Base 16
     let output = []
     for (let byte of data) {
+        byte = cleanNumber(byte)
         output.push(to16(byte))
     }
     return output.join("").padEnd(8192, "0")
@@ -65,6 +55,7 @@ function convertToDualMemory(data) {
     // Base 16
     let output = []
     for (let byte of data) {
+        byte = cleanNumber(byte)
         output.push(to16(byte))
     }
     return output.join("").padEnd(512, "0")
@@ -74,22 +65,24 @@ function convertToMassiveMemory(data) {
     // Base 64
     let output = []
     for (let byte of data) {
+        byte = cleanNumber(byte)
         output.push(to64(byte))
     }
     return output.join("").padEnd(12288, 'A')
 }
 
 async function convertToHugeMemory(data) {
+    // Base 64 + Deflate
     let output = [];
 
-    for (let num of data) {
-        num = Number(num);
-        if (num > 65535) {
+    for (let byte of data) {
+        byte = cleanNumber(byte)
+        if (byte > 65535) {
             output.push(65535);
-        } else if (num < 0) {
+        } else if (byte < 0) {
             output.push(0);
         } else {
-            output.push(num);
+            output.push(byte);
         }
     }
 
