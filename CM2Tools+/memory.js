@@ -74,37 +74,29 @@ function convertToMassiveMemory(data) {
 async function convertToHugeMemory(data) {
     // Base 64 + Deflate
     let output = [];
+    const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
 
     for (let byte of data) {
-        byte = cleanNumber(byte)
-        if (byte > 65535) {
-            output.push(65535);
-        } else if (byte < 0) {
-            output.push(0);
-        } else {
-            output.push(byte);
-        }
+        output.push(clamp(cleanNumber(byte), 0, 65535));
     }
 
-    if (output.length > 65536) {
-        output.length = 65536;
-    }
+    output.fill(0, output.length, 65536)
+    output.length = 65536;
 
-    while (output.length < 65536) {
-        output.push(0);
-    }
+    const bytes = new Uint8Array(131072);
 
-    const byteArray = new Uint8Array(131072);
-
+    bytes.map((_, index) => { if (index % 2 == 0) { return output[index / 2] & 0xFF } else { return (output[(index - 1) / 2] >> 8) & 0xFF } })
+    console.log(bytes)
     for (let i = 0; i < 65536; i++) {
         const value = output[i];
-        byteArray[i * 2] = value & 0xFF;
-        byteArray[i * 2 + 1] = (value >> 8) & 0xFF;
+        bytes[i * 2] = value & 0xFF;
+        bytes[i * 2 + 1] = (value >> 8) & 0xFF;
     }
+    console.log(bytes)
 
     const cs = new CompressionStream("deflate-raw");
     const writer = cs.writable.getWriter();
-    writer.write(byteArray);
+    writer.write(bytes);
     writer.close();
 
     const compressed = await new Response(cs.readable).arrayBuffer();
@@ -115,13 +107,5 @@ async function convertToHugeMemory(data) {
         binary += String.fromCharCode(uint8[i]);
     }
 
-    let base64 = btoa(binary);
-
-    if (base64.endsWith("==")) {
-        base64 = base64.slice(0, -2);
-    } else if (base64.endsWith("=")) {
-        base64 = base64.slice(0, -1);
-    }
-
-    return base64;
+    return btoa(binary).replace(/[=]/g, '');
 }

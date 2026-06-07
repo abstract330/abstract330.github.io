@@ -1,4 +1,4 @@
-let circuit = []
+let circuit = {}
 let simulated = []
 let json_data = {}
 
@@ -132,7 +132,7 @@ function update() {
 }
 
 function addBlock(block, x, y, z, data = [], power = 0) {
-    circuit.blocks.push({id: block, power: power, x: x, y: y, z: z, data: data})
+    circuit.blocks.push({id: block, power: power, x: Number(x), y: Number(y), z: Number(z), data: data})
     return circuit.blocks.length // Block ID (Starts at 1))
 }
 
@@ -163,6 +163,24 @@ function buildingRightVector(front_vector, up_vector) {
         front_vector[2] * up_vector[0] - front_vector[0] * up_vector[2],
         front_vector[0] * up_vector[1] - front_vector[1] * up_vector[0]
     ]
+}
+
+function decompile(saveData = "???") {
+    let save_segments = saveData.split("?")
+    for (let block of save_segments[0].split(";")) {
+        let data = block.split(",")
+        let extra_data
+        if (data[5]) {
+            extra_data = data[5].split("+")
+        } else {
+            extra_data = []
+        }
+        addBlock(data[0], data[2], data[3], data[4], extra_data, data[1])
+    }
+    for (let connection of save_segments[1].split(";")) {
+        let data = connection.split(",")
+        connect(data[0], data[1])
+    }
 }
 
 async function compile() {
@@ -203,3 +221,15 @@ function copy(data) {
         alert("Failed to copy circuit: " + err)
     })
 }
+
+window.getCircuit = function () { if (circuit && Object.keys(circuit).length > 0) {return circuit} else { return null} }
+window.addBlock = addBlock
+window.connect = connect
+window.addBuilding = addBuilding
+window.setBuildingData = setBuildingData
+window.connectBuilding = connectBuilding
+
+window.compile = compile
+window.decompile = decompile
+
+window.copy = copy
