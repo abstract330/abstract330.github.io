@@ -1,12 +1,11 @@
 import * as THREE from 'three';
 
-// 1. SETUP SCENE, CAMERA, AND RENDERER
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87ceeb);
 scene.fog = new THREE.FogExp2(0x87ceeb, 0.01);
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(8, 8, 14);
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 10, 10);
 camera.lookAt(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -28,7 +27,6 @@ scene.add(sunlight);
 // 3. BASEPLATE + GRID
 const groundSize = 50;
 
-
 const baseMaterial = new THREE.MeshStandardMaterial({
     color: 0x3b7a57,
     roughness: 0.9,
@@ -40,156 +38,108 @@ basePlane.rotation.x = -Math.PI / 2;
 basePlane.position.y = -0.01;
 scene.add(basePlane);
 
-// 4. CUBE PLACEMENT
-const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
-const cubeMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffcc00,
-    roughness: 0.35,
-    metalness: 0.1,
-});
-
-const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
-
-function addCubeAt(point) {
-    const snappedX = Math.floor(point.x + 0.5) + 0.5;
-    const snappedZ = Math.floor(point.z + 0.5) + 0.5;
-
-    const cube = new THREE.Mesh(cubeGeometry, cubeMaterial.clone());
-    cube.position.set(snappedX, 0.5, snappedZ);
-    scene.add(cube);
-}
-
-function onClick(event) {
-    pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-    pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-    raycaster.setFromCamera(pointer, camera);
-    const intersects = raycaster.intersectObject(basePlane);
-
-    if (intersects.length > 0) {
-        addCubeAt(intersects[0].point);
-    }
-}
-
-window.addEventListener('click', onClick);
-
-// 5. CAMERA MOVEMENT
-const moveState = {
-    forward: false,
-    backward: false,
-    left: false,
-    right: false,
-    up: false,
-    down: false,
-    fast: false,
-};
-
-let yaw = 0;
-let pitch = 0;
-let isRightMouseDown = false;
-let lastMouse = { x: 0, y: 0 };
+let keysDown = {}
 
 window.addEventListener('keydown', (event) => {
-    switch (event.key.toLowerCase()) {
-        case 'w': moveState.forward = true; break;
-        case 's': moveState.backward = true; break;
-        case 'a': moveState.left = true; break;
-        case 'd': moveState.right = true; break;
-        case 'q': moveState.up = true; break;
-        case 'e': moveState.down = true; break;
-        case 'shift': moveState.fast = true; break;
-    }
+    keysDown[event.key.toLocaleUpperCase()] = true
 });
 
 window.addEventListener('keyup', (event) => {
-    switch (event.key.toLowerCase()) {
-        case 'w': moveState.forward = false; break;
-        case 's': moveState.backward = false; break;
-        case 'a': moveState.left = false; break;
-        case 'd': moveState.right = false; break;
-        case 'q': moveState.up = false; break;
-        case 'e': moveState.down = false; break;
-        case 'shift': moveState.fast = false; break;
-    }
+    keysDown[event.key.toLocaleUpperCase()] = false
 });
 
 window.addEventListener('contextmenu', (event) => event.preventDefault());
 
+let mouseStartPosition = {x: 0, y: 0}
+let isDragging = false
+let draggingButton = null
+let yaw = 0
+let pitch = 0
+const rotateSpeed = 0.005
+
 window.addEventListener('mousedown', (event) => {
-    if (event.button === 2) {
-        isRightMouseDown = true;
-        lastMouse.x = event.clientX;
-        lastMouse.y = event.clientY;
-    }
+    isDragging = true
+    draggingButton = event.button
+    mouseStartPosition.x = event.clientX
+    mouseStartPosition.y = event.clientY
 });
 
 window.addEventListener('mouseup', (event) => {
-    if (event.button === 2) {
-        isRightMouseDown = false;
-    }
+    isDragging = false
+    draggingButton = null
 });
 
 window.addEventListener('mousemove', (event) => {
-    if (!isRightMouseDown) return;
+    const dragDeltaX = event.clientX - mouseStartPosition.x;
+    const dragDeltaY = event.clientY - mouseStartPosition.y;
+    if (!isDragging) return
 
-    const dx = event.clientX - lastMouse.x;
-    const dy = event.clientY - lastMouse.y;
-    lastMouse.x = event.clientX;
-    lastMouse.y = event.clientY;
+    if (draggingButton === 2) {
+        yaw -= dragDeltaX * rotateSpeed
+        pitch -= dragDeltaY * rotateSpeed
+        const maxPitch = Math.PI / 2 - 0.1
+        pitch = Math.max(-maxPitch, Math.min(maxPitch, pitch))
+        camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+    }
 
-    yaw -= dx * 0.002;
-    pitch -= dy * 0.002;
-    pitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, pitch));
+    mouseStartPosition.x = event.clientX
+    mouseStartPosition.y = event.clientY
 });
 
 window.addEventListener('wheel', (event) => {
-    camera.position.addScaledVector(getForwardVector(), event.deltaY * 0.001);
+    
 });
 
-function getForwardVector() {
+function cameraFoward(xmul = 1, ymul = 1, zmul = 1) {
     const forward = new THREE.Vector3(0, 0, -1);
     forward.applyQuaternion(camera.quaternion);
-    forward.y = 0;
+    forward.x *= xmul
+    forward.y *= ymul
+    forward.z *= zmul
     forward.normalize();
     return forward;
 }
 
-function getRightVector() {
+function cameraRight(xmul = 1, ymul = 1, zmul = 1) {
     const right = new THREE.Vector3(1, 0, 0);
     right.applyQuaternion(camera.quaternion);
-    right.y = 0;
+    right.x *= xmul
+    right.y *= ymul
+    right.z *= zmul
     right.normalize();
     return right;
 }
 
-// 6. ANIMATION LOOP
-const clock = new THREE.Clock();
+function getKeyDown(key) {
+    key = key.toLocaleUpperCase()
+    keysDown[key] |= false
+    return keysDown[key]
+}
+
+const timer = new THREE.Timer();
 
 function animate() {
-    requestAnimationFrame(animate);
+    requestAnimationFrame(animate)
 
-    const delta = Math.min(clock.getDelta(), 0.05);
-    const speed = (moveState.fast ? 10 : 5) * delta;
+    // Frame
 
-    const forward = getForwardVector();
-    const right = getRightVector();
+    const delta = Math.max(timer.getDelta(), 0.01);
 
-    if (moveState.forward) camera.position.addScaledVector(forward, speed);
-    if (moveState.backward) camera.position.addScaledVector(forward, -speed);
-    if (moveState.left) camera.position.addScaledVector(right, -speed);
-    if (moveState.right) camera.position.addScaledVector(right, speed);
-    if (moveState.up) camera.position.y += speed;
-    if (moveState.down) camera.position.y -= speed;
+    const forward = cameraFoward();
+    const right = cameraRight();
+    const up = new THREE.Vector3().crossVectors(forward, right)
 
-    camera.quaternion.setFromEuler(new THREE.Euler(pitch, yaw, 0, 'YXZ'));
+    console.log(delta)
+    const movementSpeed = 25
+    camera.position.addScaledVector(right.multiplyScalar(+getKeyDown("d") - +getKeyDown("a")), movementSpeed * delta)
+    camera.position.addScaledVector(forward.multiplyScalar(+getKeyDown("w") - +getKeyDown("s")), movementSpeed * delta)
+    camera.position.addScaledVector(up.multiplyScalar(+getKeyDown("q") - +getKeyDown("e")), movementSpeed * delta)
 
     renderer.render(scene, camera);
 }
 
 animate();
 
-// 7. RESIZE HANDLER
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
